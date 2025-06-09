@@ -32,6 +32,7 @@
     "@supabase/supabase-js": "^2.38.4",
     "ai": "^2.2.20",
     "chart.js": "^4.4.0",
+    "csv-parse": "^5.5.2",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.16.4",
     "next": "14.0.0",
@@ -43,6 +44,8 @@
     "react-hot-toast": "^2.4.1",
     "react-intersection-observer": "^9.5.2",
     "swr": "^2.2.4",
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -52,6 +55,7 @@
     "@types/node": "^20.8.10",
     "@types/react": "^18.2.33",
     "@types/react-dom": "^18.2.14",
+    "@types/uuid": "^9.0.7",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.52.0",
     "eslint-config-next": "14.0.0",
