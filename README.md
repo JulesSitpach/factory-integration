@@ -331,6 +331,7 @@ TradeNavigatorPro/
 - Stripe account
 - OpenRouter API key
 - USTR data access
+- WTO API key
 
 ### Quick Setup
 
