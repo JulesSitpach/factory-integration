@@ -2,7 +2,7 @@
 
 **Empowering US SMBs to Navigate Trade Policy and Tariff Volatility**
 
-A modern SaaS platform built with Next.js 14, Supabase, and Stripe, offering AI-powered tools, seamless integrations, and a polished, responsive UI to help SMBs thrive amid global trade uncertainty.
+A modern SaaS platform built with Next.js 14, Supabase, and Stripe, offering AI-powered tools, seamless integrations, and a polished, responsive UI to help SMBs thrive amid global trade uncertainty. The goal is also to get a functional version of the client component created, which can then be iteratively enhanced.
 
 ---
 
