@@ -1,308 +1,243 @@
 import { createClient } from '@supabase/supabase-js';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { cache } from 'react';
-
-// Types for database tables
-export type User = {
-  id: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-  full_name?: string;
-  company_name?: string;
-  company_size?: string;
-  industry?: string;
-  role?: string;
-  onboarding_completed?: boolean;
-  subscription_tier?: 'free' | 'basic' | 'pro' | 'enterprise';
-  subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled';
-  stripe_customer_id?: string;
-};
-
-export type Supplier = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  name: string;
-  country: string;
-  product_categories: string[];
-  contact_email?: string;
-  contact_phone?: string;
-  website?: string;
-  verified: boolean;
-  rating?: number;
-  user_id: string;
-  notes?: string;
-};
-
-export type TariffData = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  country: string;
-  hts_code: string;
-  description: string;
-  rate: number;
-  effective_date: string;
-  expiration_date?: string;
-};
-
-export type PricingModel = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  name: string;
-  description?: string;
-  user_id: string;
-  product_id: string;
-  base_cost: number;
-  tariff_cost: number;
-  shipping_cost: number;
-  other_costs: number;
-  current_price: number;
-  suggested_price: number;
-  margin_percentage: number;
-  scenario_type: 'absorb' | 'pass_through' | 'split';
-  is_active: boolean;
-};
-
-export type Database = {
-  public: {
-    Tables: {
-      users: {
-        Row: User;
-        Insert: Omit<User, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      suppliers: {
-        Row: Supplier;
-        Insert: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      tariff_data: {
-        Row: TariffData;
-        Insert: Omit<TariffData, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<TariffData, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      pricing_models: {
-        Row: PricingModel;
-        Insert: Omit<PricingModel, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<PricingModel, 'id' | 'created_at' | 'updated_at'>>;
-      };
-    };
-  };
-};
+import { Database } from '../../types/database.types';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Error handling for missing environment variables
+// Validate required environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Missing Supabase environment variables. Please check your .env file.'
-  );
+  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+}
+
+// Type for Supabase client options
+type SupabaseClientOptions = {
+  auth?: {
+    persistSession?: boolean;
+    autoRefreshToken?: boolean;
+  };
+  global?: {
+    headers?: Record<string, string>;
+  };
+};
+
+/**
+ * Creates a Supabase client with the provided options
+ * @param customOptions - Optional client configuration options
+ * @param useServiceRole - Whether to use the service role key (server-side only)
+ * @returns Supabase client instance
+ */
+export function createSupabaseClient(
+  customOptions: SupabaseClientOptions = {},
+  useServiceRole = false
+) {
+  // Use service role key only on the server and when explicitly requested
+  const apiKey = useServiceRole && supabaseServiceRoleKey 
+    ? supabaseServiceRoleKey 
+    : supabaseAnonKey;
+
+  // Default options
+  const defaultOptions: SupabaseClientOptions = {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+    global: {
+      headers: {
+        'x-application-name': 'factory-integration',
+      },
+    },
+  };
+
+  // Merge default options with custom options
+  const options = {
+    ...defaultOptions,
+    auth: {
+      ...defaultOptions.auth,
+      ...customOptions.auth,
+    },
+    global: {
+      ...defaultOptions.global,
+      headers: {
+        ...defaultOptions.global?.headers,
+        ...customOptions.global?.headers,
+      },
+    },
+  };
+
+  return createClient<Database>(supabaseUrl, apiKey, options);
 }
 
 /**
- * Creates a Supabase client for use in browser environments
- * @returns Supabase client
+ * Supabase client for client-side usage
+ * This client uses the anon key which has RLS policies applied
  */
-export const createBrowserClient = () => {
-  return createClientComponentClient<Database>({
-    supabaseUrl,
-    supabaseKey: supabaseAnonKey,
-  });
-};
+export const supabaseClient = createSupabaseClient();
 
 /**
- * Creates a cached Supabase client for use in server components
- * This uses Next.js cache() to deduplicate requests
+ * Creates a Supabase admin client with service role key
+ * IMPORTANT: This bypasses RLS and should only be used server-side
+ * @returns Supabase client with admin privileges
  */
-export const createServerClient = cache(() => {
-  const cookieStore = cookies();
-  return createServerComponentClient<Database>({ cookies: () => cookieStore });
-});
+export function createSupabaseAdmin() {
+  if (typeof window !== 'undefined') {
+    throw new Error('createSupabaseAdmin can only be used on the server');
+  }
 
-/**
- * Creates a Supabase admin client with full privileges
- * @returns Supabase admin client
- * @note This should only be used in secure server contexts
- */
-export const createAdminClient = () => {
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseServiceKey) {
+  if (!supabaseServiceRoleKey) {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
   }
-  
-  return createClient<Database>(supabaseUrl!, supabaseServiceKey);
-};
+
+  return createSupabaseClient({}, true);
+}
 
 /**
- * Helper function to get the current authenticated user
- * @param client Supabase client
- * @returns The current user or null
+ * Utility function to handle Supabase errors consistently
+ * @param error - Error from Supabase operation
+ * @param customMessage - Optional custom error message
+ * @returns Formatted error object
  */
-export const getCurrentUser = async (client: ReturnType<typeof createBrowserClient | typeof createServerClient>) => {
-  const { data: { user } } = await client.auth.getUser();
-  return user;
-};
+export function handleSupabaseError(error: any, customMessage?: string): Error {
+  console.error('Supabase error:', error);
+  
+  // Format the error message
+  const message = customMessage || 'Database operation failed';
+  const details = error?.message || error?.error_description || JSON.stringify(error);
+  
+  // Create a new error with formatted message
+  const formattedError = new Error(`${message}: ${details}`);
+  
+  // Add the original error as a property
+  (formattedError as any).originalError = error;
+  
+  return formattedError;
+}
 
 /**
- * Helper function to get the current user's profile data
- * @param client Supabase client
- * @returns The user profile data or null
+ * Factory Integration specific database operations
  */
-export const getUserProfile = async (client: ReturnType<typeof createBrowserClient | typeof createServerClient>) => {
-  const { data: { user } } = await client.auth.getUser();
-  
-  if (!user) return null;
-  
-  const { data, error } = await client
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+export const factoryDb = {
+  /**
+   * Saves a cost calculation to the database
+   */
+  async saveCostCalculation(userId: string, data: {
+    materials: number;
+    labor: number;
+    overhead: number;
+    name?: string;
+    description?: string;
+    metadata?: Record<string, any>;
+  }) {
+    const admin = createSupabaseAdmin();
     
-  if (error) {
-    console.error('Error fetching user profile:', error);
-    return null;
-  }
+    try {
+      const { data: calculation, error } = await admin
+        .from('cost_calculations')
+        .insert({
+          user_id: userId,
+          materials: data.materials,
+          labor: data.labor,
+          overhead: data.overhead,
+          total_cost: data.materials + data.labor + data.overhead,
+          name: data.name,
+          description: data.description,
+          metadata: data.metadata
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return calculation;
+    } catch (error) {
+      throw handleSupabaseError(error, 'Failed to save cost calculation');
+    }
+  },
   
-  return data;
-};
-
-/**
- * Helper function to update a user's profile
- * @param client Supabase client
- * @param userId User ID
- * @param updates Profile updates
- * @returns The updated profile or null
- */
-export const updateUserProfile = async (
-  client: ReturnType<typeof createBrowserClient | typeof createServerClient>,
-  userId: string,
-  updates: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>
-) => {
-  const { data, error } = await client
-    .from('users')
-    .update(updates)
-    .eq('id', userId)
-    .select()
-    .single();
+  /**
+   * Retrieves cost calculations for a user
+   */
+  async getUserCostCalculations(userId: string, limit = 10, offset = 0) {
+    const client = createSupabaseAdmin();
     
-  if (error) {
-    console.error('Error updating user profile:', error);
-    return null;
-  }
+    try {
+      const { data, error, count } = await client
+        .from('cost_calculations')
+        .select('*', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (error) throw error;
+      return { data, count };
+    } catch (error) {
+      throw handleSupabaseError(error, 'Failed to retrieve cost calculations');
+    }
+  },
   
-  return data;
-};
-
-/**
- * Helper function to fetch suppliers for a user
- * @param client Supabase client
- * @param userId User ID
- * @param options Query options
- * @returns Array of suppliers
- */
-export const getUserSuppliers = async (
-  client: ReturnType<typeof createBrowserClient | typeof createServerClient>,
-  userId: string,
-  options?: {
-    limit?: number;
-    offset?: number;
-    country?: string;
-    verified?: boolean;
-  }
-) => {
-  let query = client
-    .from('suppliers')
-    .select('*')
-    .eq('user_id', userId);
+  /**
+   * Gets a user profile by ID
+   */
+  async getUserProfile(userId: string) {
+    const client = supabaseClient;
     
-  if (options?.country) {
-    query = query.eq('country', options.country);
-  }
+    try {
+      const { data, error } = await client
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      throw handleSupabaseError(error, 'Failed to retrieve user profile');
+    }
+  },
   
-  if (options?.verified !== undefined) {
-    query = query.eq('verified', options.verified);
-  }
-  
-  if (options?.limit) {
-    query = query.limit(options.limit);
-  }
-  
-  if (options?.offset) {
-    query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) {
-    console.error('Error fetching user suppliers:', error);
-    return [];
-  }
-  
-  return data;
-};
-
-/**
- * Helper function to fetch tariff data
- * @param client Supabase client
- * @param htsCode HTS code
- * @param country Country
- * @returns Tariff data or null
- */
-export const getTariffData = async (
-  client: ReturnType<typeof createBrowserClient | typeof createServerClient>,
-  htsCode: string,
-  country: string
-) => {
-  const { data, error } = await client
-    .from('tariff_data')
-    .select('*')
-    .eq('hts_code', htsCode)
-    .eq('country', country)
-    .lte('effective_date', new Date().toISOString())
-    .or(`expiration_date.is.null,expiration_date.gt.${new Date().toISOString()}`)
-    .order('effective_date', { ascending: false })
-    .limit(1)
-    .single();
+  /**
+   * Updates a user profile
+   */
+  async updateUserProfile(userId: string, profileData: Partial<{
+    full_name: string;
+    department: string;
+    employee_id: string;
+    preferences: Record<string, any>;
+  }>) {
+    const client = supabaseClient;
     
-  if (error) {
-    console.error('Error fetching tariff data:', error);
-    return null;
-  }
+    try {
+      const { data, error } = await client
+        .from('user_profiles')
+        .update(profileData)
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      throw handleSupabaseError(error, 'Failed to update user profile');
+    }
+  },
   
-  return data;
-};
-
-/**
- * Helper function to create a pricing model
- * @param client Supabase client
- * @param model Pricing model data
- * @returns The created pricing model or null
- */
-export const createPricingModel = async (
-  client: ReturnType<typeof createBrowserClient | typeof createServerClient>,
-  model: Omit<PricingModel, 'id' | 'created_at' | 'updated_at'>
-) => {
-  const { data, error } = await client
-    .from('pricing_models')
-    .insert(model)
-    .select()
-    .single();
+  /**
+   * Gets active integrations
+   */
+  async getActiveIntegrations() {
+    const client = supabaseClient;
     
-  if (error) {
-    console.error('Error creating pricing model:', error);
-    return null;
+    try {
+      const { data, error } = await client
+        .from('active_integrations')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      throw handleSupabaseError(error, 'Failed to retrieve active integrations');
+    }
   }
-  
-  return data;
 };
 
-// Note: @supabase/auth-helpers-nextjs is deprecated in favor of @supabase/ssr
-// Consider migrating to @supabase/ssr in a future update
+export default supabaseClient;
