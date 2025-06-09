@@ -1,13 +1,9 @@
-import { ReactNode } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { notFound } from 'next/navigation';
-import { createServerClient } from '@/lib/db/supabase';
+import { ReactNode } from "react";
+import Link from "next/link";
+import { useTranslation } from "next-i18next";
+import { usePathname } from "next/navigation";
+import { getTranslation } from "../../../lib/i18n";
 
-// Define supported locales
-const locales = ['en', 'es'];
-
-// Type for the layout props
 interface DashboardLayoutProps {
   children: ReactNode;
   params: {
@@ -15,467 +11,189 @@ interface DashboardLayoutProps {
   };
 }
 
-// Translations for the dashboard layout
-const translations = {
-  en: {
-    // Navigation
-    dashboard: 'Dashboard',
-    calculator: 'Cost Calculator',
-    planner: 'Supply Chain Planner',
-    optimizer: 'Pricing Optimizer',
-    tracker: 'Tariff Tracker',
-    router: 'Route Optimizer',
-    settings: 'Settings',
-    help: 'Help & Support',
-    
-    // Header
-    search: 'Search',
-    searchPlaceholder: 'Search...',
-    notifications: 'Notifications',
-    noNotifications: 'No new notifications',
-    viewAll: 'View all',
-    profile: 'Profile',
-    account: 'Account Settings',
-    billing: 'Billing',
-    logout: 'Log out',
-    
-    // Mobile
-    menu: 'Menu',
-    close: 'Close',
-    
-    // Footer
-    copyright: '© 2025 TradeNavigatorPro. All rights reserved.',
-    terms: 'Terms',
-    privacy: 'Privacy',
-  },
-  es: {
-    // Navigation
-    dashboard: 'Panel',
-    calculator: 'Calculadora de Costos',
-    planner: 'Planificador de Cadena',
-    optimizer: 'Optimizador de Precios',
-    tracker: 'Rastreador de Aranceles',
-    router: 'Optimizador de Rutas',
-    settings: 'Configuración',
-    help: 'Ayuda y Soporte',
-    
-    // Header
-    search: 'Buscar',
-    searchPlaceholder: 'Buscar...',
-    notifications: 'Notificaciones',
-    noNotifications: 'No hay nuevas notificaciones',
-    viewAll: 'Ver todas',
-    profile: 'Perfil',
-    account: 'Configuración de Cuenta',
-    billing: 'Facturación',
-    logout: 'Cerrar sesión',
-    
-    // Mobile
-    menu: 'Menú',
-    close: 'Cerrar',
-    
-    // Footer
-    copyright: '© 2025 TradeNavigatorPro. Todos los derechos reservados.',
-    terms: 'Términos',
-    privacy: 'Privacidad',
-  },
-};
+export async function generateMetadata({ params: { locale } }: DashboardLayoutProps) {
+  const { t } = await getTranslation(locale, "common");
+  return {
+    title: `${t("common.appName")} - ${t("common.navigation.dashboard")}`,
+  };
+}
 
-export default async function DashboardLayout({ children, params }: DashboardLayoutProps) {
-  // Check if the locale is supported
-  if (!locales.includes(params.locale)) {
-    notFound();
+export default function DashboardLayout({
+  children,
+  params: { locale },
+}: DashboardLayoutProps) {
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <DashboardNavigation locale={locale} />
+      <main className="pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {children}
+        </div>
+      </main>
+      <footer className="bg-white shadow-inner">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-sm text-gray-500">
+            {locale === "es" ? "© 2025 Integración de Fábrica. Todos los derechos reservados." : "© 2025 Factory Integration. All rights reserved."}
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function DashboardNavigation({ locale }: { locale: string }) {
+  const pathname = usePathname();
+  
+  // Client component for translations
+  return (
+    <ClientNav locale={locale} pathname={pathname} />
+  );
+}
+
+"use client";
+
+import { useTranslation } from "next-i18next";
+
+function ClientNav({ locale, pathname }: { locale: string; pathname: string }) {
+  const { t } = useTranslation("common");
+  
+  const navigation = [
+    { name: t("navigation.dashboard"), href: `/${locale}/dashboard`, current: pathname === `/${locale}/dashboard` },
+    { name: t("navigation.calculator"), href: `/${locale}/dashboard/calculator`, current: pathname.includes(`/${locale}/dashboard/calculator`) },
+  ];
+  
+  const userNavigation = [
+    { name: t("navigation.profile"), href: `/${locale}/dashboard/profile` },
+    { name: t("navigation.settings"), href: `/${locale}/dashboard/settings` },
+    { name: t("auth.signOut"), href: `/api/auth/signout` },
+  ];
+  
+  function classNames(...classes: string[]) {
+    return classes.filter(Boolean).join(' ');
   }
 
-  // Get translations for the current locale
-  const t = translations[params.locale as keyof typeof translations];
-  
-  // Get the current user from Supabase
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // Get user profile data
-  const { data: profile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user?.id || '')
-    .single();
-  
-  // Get user's full name or email for display
-  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
-  
-  // Get user's subscription tier for conditional rendering
-  const subscriptionTier = profile?.subscription_tier || 'free';
-  
-  // Get user's avatar (placeholder for now)
-  const avatarUrl = user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2340A1&color=fff`;
-
   return (
-    <div className="h-screen flex flex-col bg-secondary">
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-white border-b border-gray-200 py-4 px-4">
-        <div className="flex items-center justify-between">
-          <button
-            id="mobile-menu-button"
-            className="text-slate focus:outline-none"
-            aria-label={t.menu}
-            onClick={() => {
-              const sidebar = document.getElementById('sidebar');
-              if (sidebar) {
-                sidebar.classList.toggle('-translate-x-full');
-              }
-            }}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-          
-          <Link href={`/dashboard/${params.locale}`} className="flex items-center space-x-2 no-underline">
-            <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-sm">T</span>
+    <nav className="bg-white shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link href={`/${locale}`}>
+                <span className="text-xl font-bold text-indigo-600">{t("common.appName")}</span>
+              </Link>
             </div>
-            <span className="text-primary font-semibold text-lg">TradeNavigatorPro</span>
-          </Link>
-          
-          {/* Mobile User Menu */}
-          <div className="relative group">
-            <button className="flex items-center focus:outline-none">
-              <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                <Image
-                  src={avatarUrl}
-                  alt={displayName}
-                  width={32}
-                  height={32}
-                  className="object-cover"
-                />
-              </div>
-            </button>
-            
-            {/* Dropdown Menu */}
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-              <div className="py-1">
-                <Link href={`/dashboard/${params.locale}/profile`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                  {t.profile}
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={classNames(
+                    item.current
+                      ? 'border-indigo-500 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                    'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
+                  )}
+                  aria-current={item.current ? 'page' : undefined}
+                >
+                  {item.name}
                 </Link>
-                <Link href={`/dashboard/${params.locale}/settings`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                  {t.account}
-                </Link>
-                <Link href={`/dashboard/${params.locale}/billing`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                  {t.billing}
-                </Link>
-                <form action="/api/auth/signout" method="post">
-                  <button type="submit" className="block w-full text-left px-4 py-2 text-sm text-slate hover:bg-secondary">
-                    {t.logout}
-                  </button>
-                </form>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
-      </header>
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside 
-          id="sidebar"
-          className="w-64 bg-white border-r border-gray-200 flex-shrink-0 fixed lg:sticky top-0 h-full lg:h-screen z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
-        >
-          {/* Sidebar Header */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-            <Link href={`/dashboard/${params.locale}`} className="flex items-center space-x-2 no-underline">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <span className="text-white font-bold text-sm">T</span>
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            <div className="ml-3 relative">
+              <div>
+                <button
+                  type="button"
+                  className="bg-white flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  id="user-menu-button"
+                  aria-expanded="false"
+                  aria-haspopup="true"
+                >
+                  <span className="sr-only">Open user menu</span>
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <span className="text-indigo-800 font-medium">U</span>
+                  </div>
+                </button>
               </div>
-              <span className="text-primary font-semibold text-lg">TradeNavigatorPro</span>
-            </Link>
-            
-            {/* Close button for mobile */}
+              {/* Dropdown menu, show/hide based on menu state */}
+              {/* Dropdown menu content would go here */}
+            </div>
+          </div>
+          <div className="-mr-2 flex items-center sm:hidden">
+            {/* Mobile menu button */}
             <button
-              className="lg:hidden text-slate focus:outline-none"
-              aria-label={t.close}
-              onClick={() => {
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) {
-                  sidebar.classList.add('-translate-x-full');
-                }
-              }}
+              type="button"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              <span className="sr-only">Open main menu</span>
+              {/* Menu icon */}
+              <svg
+                className="block h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
             </button>
           </div>
-          
-          {/* Sidebar Navigation Links */}
-          <nav className="px-4 py-6 space-y-1">
-            <Link 
-              href={`/dashboard/${params.locale}`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-              </svg>
-              <span>{t.dashboard}</span>
-            </Link>
-            
-            <Link 
-              href={`/dashboard/${params.locale}/calculator`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-              </svg>
-              <span>{t.calculator}</span>
-            </Link>
-            
-            <Link 
-              href={`/dashboard/${params.locale}/planner`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-              </svg>
-              <span>{t.planner}</span>
-            </Link>
-            
-            <Link 
-              href={`/dashboard/${params.locale}/optimizer`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span>{t.optimizer}</span>
-            </Link>
-            
-            <Link 
-              href={`/dashboard/${params.locale}/tracker`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span>{t.tracker}</span>
-            </Link>
-            
-            <Link 
-              href={`/dashboard/${params.locale}/router`}
-              className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-            >
-              <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-              </svg>
-              <span>{t.router}</span>
-            </Link>
-            
-            <div className="pt-4 mt-4 border-t border-gray-200">
-              <Link 
-                href={`/dashboard/${params.locale}/settings`}
-                className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-              >
-                <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                <span>{t.settings}</span>
-              </Link>
-              
-              <Link 
-                href={`/dashboard/${params.locale}/help`}
-                className="flex items-center px-3 py-2 text-slate rounded-md hover:bg-secondary hover:text-primary group transition-colors no-underline"
-              >
-                <svg className="w-5 h-5 mr-3 text-slate group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>{t.help}</span>
-              </Link>
-            </div>
-          </nav>
-          
-          {/* Subscription Badge */}
-          {subscriptionTier !== 'free' && (
-            <div className="px-4 mt-auto mb-6">
-              <div className={`px-3 py-2 rounded-md text-center text-white font-medium ${
-                subscriptionTier === 'pro' ? 'bg-accent' : 
-                subscriptionTier === 'enterprise' ? 'bg-primary' : 'bg-success'
-              }`}>
-                {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)} Plan
-              </div>
-            </div>
-          )}
-        </aside>
-        
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Desktop Header */}
-          <header className="hidden lg:block bg-white border-b border-gray-200 py-4">
-            <div className="px-6 flex items-center justify-between">
-              {/* Search Bar */}
-              <div className="relative max-w-md w-full">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  placeholder={t.searchPlaceholder}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                />
-              </div>
-              
-              {/* Right Side Actions */}
-              <div className="flex items-center space-x-4">
-                {/* Notifications */}
-                <div className="relative group">
-                  <button className="flex items-center focus:outline-none">
-                    <svg className="w-6 h-6 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    {/* Notification Badge */}
-                    <span className="absolute -top-1 -right-1 bg-accent text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                      2
-                    </span>
-                  </button>
-                  
-                  {/* Notifications Dropdown */}
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-sm font-semibold text-slate">{t.notifications}</h3>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {/* Sample Notifications */}
-                      <div className="p-4 border-b border-gray-100 hover:bg-secondary">
-                        <p className="text-sm text-slate font-medium">New tariff alert for HTS 8544.42</p>
-                        <p className="text-xs text-slate/70 mt-1">10 minutes ago</p>
-                      </div>
-                      <div className="p-4 border-b border-gray-100 hover:bg-secondary">
-                        <p className="text-sm text-slate font-medium">Supply chain risk detected</p>
-                        <p className="text-xs text-slate/70 mt-1">2 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="p-2 text-center border-t border-gray-200">
-                      <Link href={`/dashboard/${params.locale}/notifications`} className="text-sm text-primary hover:underline">
-                        {t.viewAll}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Language Selector */}
-                <div className="relative group">
-                  <button className="flex items-center text-slate hover:text-primary focus:outline-none">
-                    <span>🌐</span>
-                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <div className="py-1">
-                      <Link 
-                        href={`/dashboard/en${params.locale !== 'en' ? window.location.pathname.replace(`/dashboard/${params.locale}`, '') : ''}`} 
-                        className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline"
-                      >
-                        English
-                      </Link>
-                      <Link 
-                        href={`/dashboard/es${params.locale !== 'es' ? window.location.pathname.replace(`/dashboard/${params.locale}`, '') : ''}`}
-                        className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline"
-                      >
-                        Español
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* User Menu */}
-                <div className="relative group">
-                  <button className="flex items-center space-x-2 focus:outline-none">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                      <Image
-                        src={avatarUrl}
-                        alt={displayName}
-                        width={32}
-                        height={32}
-                        className="object-cover"
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-slate hidden md:block">{displayName}</span>
-                    <svg className="w-4 h-4 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  
-                  {/* User Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <div className="py-1">
-                      <Link href={`/dashboard/${params.locale}/profile`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                        {t.profile}
-                      </Link>
-                      <Link href={`/dashboard/${params.locale}/settings`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                        {t.account}
-                      </Link>
-                      <Link href={`/dashboard/${params.locale}/billing`} className="block px-4 py-2 text-sm text-slate hover:bg-secondary no-underline">
-                        {t.billing}
-                      </Link>
-                      <form action="/api/auth/signout" method="post">
-                        <button type="submit" className="block w-full text-left px-4 py-2 text-sm text-slate hover:bg-secondary">
-                          {t.logout}
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-          
-          {/* Main Content */}
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
-          
-          {/* Footer */}
-          <footer className="bg-white border-t border-gray-200 py-4 px-6">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-sm text-slate/70">{t.copyright}</p>
-              <div className="flex space-x-4 mt-2 md:mt-0">
-                <Link href={`/marketing/${params.locale}/legal/terms`} className="text-sm text-slate/70 hover:text-primary no-underline">
-                  {t.terms}
-                </Link>
-                <Link href={`/marketing/${params.locale}/legal/privacy`} className="text-sm text-slate/70 hover:text-primary no-underline">
-                  {t.privacy}
-                </Link>
-              </div>
-            </div>
-          </footer>
         </div>
       </div>
-      
-      {/* Mobile Backdrop */}
-      <div 
-        id="sidebar-backdrop"
-        className="fixed inset-0 bg-slate/50 lg:hidden z-30 hidden"
-        onClick={() => {
-          const sidebar = document.getElementById('sidebar');
-          if (sidebar) {
-            sidebar.classList.add('-translate-x-full');
-          }
-          document.getElementById('sidebar-backdrop')?.classList.add('hidden');
-        }}
-      ></div>
-      
-      {/* Script to handle mobile sidebar */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
-              document.getElementById('sidebar-backdrop')?.classList.remove('hidden');
-            });
-          `,
-        }}
-      />
-    </div>
+
+      {/* Mobile menu, show/hide based on menu state */}
+      <div className="sm:hidden" id="mobile-menu">
+        <div className="pt-2 pb-3 space-y-1">
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={classNames(
+                item.current
+                  ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800',
+                'block pl-3 pr-4 py-2 border-l-4 text-base font-medium'
+              )}
+              aria-current={item.current ? 'page' : undefined}
+            >
+              {item.name}
+            </Link>
+          ))}
+        </div>
+        <div className="pt-4 pb-3 border-t border-gray-200">
+          <div className="flex items-center px-4">
+            <div className="flex-shrink-0">
+              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                <span className="text-indigo-800 font-medium">U</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <div className="text-base font-medium text-gray-800">User</div>
+              <div className="text-sm font-medium text-gray-500">user@example.com</div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1">
+            {userNavigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }
