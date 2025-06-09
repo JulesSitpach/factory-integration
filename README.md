@@ -2,11 +2,36 @@
 
 **Empowering US SMBs to Navigate Trade Policy and Tariff Volatility**
 
-A modern SaaS platform built with Next.js 14, Supabase, and Stripe, offering AI-powered tools and seamless integrations to help small and medium businesses (SMBs) thrive amid global trade uncertainty.
+A modern SaaS platform built with Next.js 14, Supabase, and Stripe, offering AI-powered tools, seamless integrations, and a polished, responsive UI to help SMBs thrive amid global trade uncertainty.
 
 ---
 
-## 🎯 What Problem Do We Solve?
+## Table of Contents
+
+1. [Problem Statement](#problem-statement)
+2. [Core Applications](#core-applications)
+3. [UI/UX Style Guide](#uiux-style-guide)
+   - [Navigation](#navigation)
+   - [Color Palette](#color-palette)
+   - [Typography](#typography)
+   - [Layout & Spacing](#layout--spacing)
+   - [App Structure & Placement](#app-structure--placement)
+   - [Accessibility & Responsiveness](#accessibility--responsiveness)
+   - [Tailwind CSS Configuration](#tailwind-css-configuration)
+   - [Sample Navigation Code (Next.js/React)](#sample-navigation-code-nextjsreact)
+4. [Technical Architecture](#technical-architecture)
+5. [Project Structure](#project-structure)
+6. [Payments](#payments)
+7. [Multilanguage Support](#multilanguage-support)
+8. [Integrations & Automation](#integrations--automation)
+9. [Security & Compliance](#security--compliance)
+10. [Monitoring & Testing](#monitoring--testing)
+11. [Getting Started](#getting-started)
+12. [Additional Recommendations](#additional-recommendations)
+
+---
+
+## Problem Statement
 
 US trade policies and tariffs create unpredictable costs and supply chain challenges for SMBs. TradeNavigatorPro delivers actionable intelligence and automation so SMBs can:
 
@@ -20,7 +45,7 @@ US trade policies and tariffs create unpredictable costs and supply chain challe
 
 ---
 
-## 🚀 Core Applications
+## Core Applications
 
 ### 1. Emergency Cost Calculator
 - Upload purchase orders for instant, AI-powered landed cost and tariff calculations
@@ -56,7 +81,168 @@ US trade policies and tariffs create unpredictable costs and supply chain challe
 
 ---
 
-## 🏗️ Technical Architecture
+## UI/UX Style Guide
+
+### Navigation
+
+#### Pre Sign-In (Public/Marketing)
+- **Top Navigation Bar:** Fixed, full width, subtle shadow
+- **Logo:** Left-aligned, clickable
+- **Links (right):** Features | Pricing | Resources | About | 🌐 Language | Sign In (primary button)
+- **Call to Action:** “Sign Up Free” (accent color)
+- **Mobile:** Hamburger menu
+
+#### Post Sign-In (App/Dashboard)
+- **Top Navigation Bar:** Compact, fixed, full width
+- **Logo:** Left
+- **App Navigation:** Dashboard | Calculator | Planner | Optimizer | Tracker | Route | (Dropdown for more)
+- **User Profile:** Avatar, dropdown (Profile, Settings, Billing, Logout)
+- **Notifications:** Bell icon
+- **Language Selector:** 🌐
+- **Org Switcher:** If multi-tenant
+
+### Color Palette
+
+| Purpose         | Color         | Hex        |
+|-----------------|--------------|------------|
+| Primary         | Deep Blue    | #2340A1    |
+| Accent          | Orange       | #FF7A59    |
+| Secondary      | Soft Gray    | #F4F6FA    |
+| Slate           | Slate        | #2D3748    |
+| Background      | White        | #FFFFFF    |
+| Success         | Green        | #38B2AC    |
+| Error/Warning   | Red          | #E53E3E    |
+| Link            | Blue         | #3B82F6    |
+
+### Typography
+
+- **Font:** [Inter](https://rsms.me/inter/)
+- **Headings:** Inter SemiBold/Bold (H1: 2.5rem, H2: 2rem, H3: 1.5rem)
+- **Body:** Inter Regular (1rem, 16px)
+- **Buttons/Inputs:** Inter Medium
+
+### Layout & Spacing
+
+- **Container:** Max 1200px, centered, 24px padding
+- **Section Spacing:** 48px
+- **Card Padding:** 24px
+- **Sidebar (optional):** For quick app switching
+- **Spacing Scale:** Multiples of 8px
+
+### App Structure & Placement
+
+#### Pre Sign-In
+- **Hero:** Headline, subheadline, CTA, illustration/screenshot
+- **Features:** Icons, short descriptions, alternating layouts
+- **Testimonials/Logos:** Carousel or grid
+- **Pricing Table:** Clear, with checkmarks
+- **Footer:** Links, social, copyright
+
+#### Post Sign-In
+- **Top Navigation:** Always visible
+- **Sidebar (optional):** Quick links, collapsible
+- **Main Content:** Dashboard (KPI cards, alerts, recent activity), tool pages (centered, export/action buttons top right)
+- **Notifications:** Slide-in/modal
+- **Settings/Profile:** Modal or page
+
+### Accessibility & Responsiveness
+
+- **Mobile First:** All layouts responsive, navigation collapses to hamburger, cards stack vertically
+- **Accessibility:** High contrast, focus states, keyboard navigation, ARIA labels
+
+### Tailwind CSS Configuration
+
+```js
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: '#2340A1',
+        accent: '#FF7A59',
+        secondary: '#F4F6FA',
+        slate: '#2D3748',
+        success: '#38B2AC',
+        danger: '#E53E3E',
+      },
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+      },
+    },
+  },
+};
+```
+
+### Sample Navigation Code (Next.js/React)
+
+#### Pre Sign-In Navigation
+
+```jsx
+// components/NavBar.js
+import Link from 'next/link';
+
+export default function NavBar() {
+  return (
+    
+      
+        TradeNavigatorPro
+        
+          Features
+          Pricing
+          Resources
+          About
+          🌐
+          
+            Sign In
+          
+          
+            Sign Up Free
+          
+        
+        {/* Mobile hamburger here */}
+      
+    
+  );
+}
+```
+
+#### Post Sign-In Navigation
+
+```jsx
+// components/AppNavBar.js
+import Link from 'next/link';
+
+export default function AppNavBar() {
+  return (
+    
+      
+        TradeNavigatorPro
+        
+          Dashboard
+          Calculator
+          Planner
+          Optimizer
+          Tracker
+          Route
+          🌐
+          
+            notifications
+            {/* Notification badge */}
+          
+          
+            {/* Avatar dropdown for profile/settings/logout */}
+            
+          
+        
+      
+    
+  );
+}
+```
+
+---
+
+## Technical Architecture
 
 | Area         | Technology/Service              | Best Practices & Improvements                        |
 |--------------|--------------------------------|------------------------------------------------------|
@@ -72,7 +258,7 @@ US trade policies and tariffs create unpredictable costs and supply chain challe
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 TradeNavigatorPro/
@@ -92,7 +278,7 @@ TradeNavigatorPro/
 
 ---
 
-## 💳 Payments
+## Payments
 
 - Stripe handles secure, PCI-compliant subscription payments and billing.
 - Webhooks keep Supabase user access and billing data in sync.
@@ -101,7 +287,7 @@ TradeNavigatorPro/
 
 ---
 
-## 🌐 Multilanguage Support
+## Multilanguage Support
 
 - Next.js i18n and `next-i18next` for seamless locale routing and translation management.
 - Translation files organized by language (e.g., `en.json`, `es.json`).
@@ -110,7 +296,7 @@ TradeNavigatorPro/
 
 ---
 
-## 🔗 Integrations & Automation
+## Integrations & Automation
 
 - **ERP, Accounting, and Inventory:** API connectors for popular SMB platforms.
 - **AI Chatbot:** In-app assistant for onboarding and support.
@@ -119,7 +305,7 @@ TradeNavigatorPro/
 
 ---
 
-## 🛡️ Security & Compliance
+## Security & Compliance
 
 - Supabase Row-Level Security (RLS) for tenant data isolation.
 - Stripe for PCI-compliant payments.
@@ -128,7 +314,7 @@ TradeNavigatorPro/
 
 ---
 
-## 🚦 Monitoring & Testing
+## Monitoring & Testing
 
 - Comprehensive monitoring with Sentry/Datadog.
 - Automated backend, frontend, and i18n tests (Jest, Playwright).
@@ -136,7 +322,7 @@ TradeNavigatorPro/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -176,7 +362,7 @@ HTS_DATABASE_URL=https://hts.usitc.gov/api
 
 ---
 
-## 📝 Additional Recommendations
+## Additional Recommendations
 
 - Use feature flags for controlled rollouts and A/B testing.
 - Maintain clear API documentation for internal and third-party integrations.
@@ -184,9 +370,16 @@ HTS_DATABASE_URL=https://hts.usitc.gov/api
 - Use CDN for static assets to improve global performance.
 - Plan for scaling translation management as you add more languages.
 - Offer freemium or pay-per-use pricing to lower the barrier for SMBs.
+- Provide interactive onboarding and in-app help for every language.
 
 ---
 
 **TradeNavigatorPro** is designed for rapid development, security, and global scale—empowering SMBs to thrive in an ever-changing trade landscape.
 
+---
+
 *See `/docs` for detailed guides and API documentation.*
+
+---
+
+**You now have a complete, actionable README that covers everything from business value to technical setup and visual design. If you need Figma references, more code samples, or further customization, just ask!**
